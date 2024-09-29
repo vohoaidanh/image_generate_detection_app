@@ -70,7 +70,7 @@ def app():
 # Tạo một ô trống để hiển thị kết quả
     with col1:
             # Add a file uploader
-        uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+        uploaded_file = st.file_uploader("Upload an image (<=5Mb)", type=["jpg", "jpeg", "png"])
         
     # # Add a selectbox to choose from sample images
         sample = st.selectbox("Or choose from sample images:", list(sample_images.keys()))
