@@ -1,4 +1,6 @@
-numpy#==1.24.4
+pip 
+numpy
+#==1.24.4
 #numba
 #scipy
 #scikit-learn
