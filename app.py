@@ -12,7 +12,7 @@ import torch
 from torchvision import transforms
 from PIL import Image
 
-from model import resnet50
+from model import resnet50, npr
 
 # Load the model
 model = resnet50(num_classes=1)
@@ -36,6 +36,13 @@ preprocess = transforms.Compose([
 sample_images = {
     "cat": "./test_images/cat.png",
     "dog": "./test_images/dog.png",
+}
+
+# Define the sample images
+model_paths = {
+    "ADOF_1": "./weights/ADOF_model_epoch_9.pth",
+    "ADOF_2": "./weights/ADOF_2.pth",
+    "NPR": "./weights/NPR.pth",
 }
 
 # Define the function to make predictions on an image
@@ -73,6 +80,17 @@ def app():
         uploaded_file = st.file_uploader("Upload an image (<=5Mb)", type=["jpg", "jpeg", "png"])
         
     # # Add a selectbox to choose from sample images
+        model_name = st.selectbox("Select model:", list(model_paths.keys()))
+        st.write(model_paths[model_name])
+    # Thêm nút để thực hiện dự đoán (nếu cần)
+        if st.button("Load model"):
+            if model_name != 'NPR':
+                model = resnet50(num_classes=1)
+            else:
+                model = npr(num_classes=1)
+            
+            model.load_state_dict(torch.load(model_paths[model_name], map_location='cpu'), strict=True)
+
         sample = st.selectbox("Or choose from sample images:", list(sample_images.keys()))
         # If an image is uploaded, make a prediction on it
         if uploaded_file is not None:
