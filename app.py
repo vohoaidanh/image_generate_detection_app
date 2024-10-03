@@ -15,15 +15,35 @@ from PIL import Image
 from model import resnet50, npr
 
 # Load the model
-model = resnet50(num_classes=1)
-model.load_state_dict(torch.load('./weights/ADOF_model_epoch_9.pth', map_location='cpu'), strict=True)
-model.eval()
+#model = resnet50(num_classes=1)
+#model.load_state_dict(torch.load('./weights/ADOF_model_epoch_9.pth', map_location='cpu'), strict=True)
+#model.eval()
 
 # Define labels
 labels = [
     "Real",
     "Generated"
 ]
+
+def resize_image(image_path):
+    # Mở ảnh từ đường dẫn
+    img = Image.open(image_path)
+    
+    # Lấy kích thước ban đầu của ảnh
+    w, h = img.size
+    
+    # Tính toán tỷ lệ thay đổi kích thước
+    if w < h:
+        new_w = 256
+        new_h = int((256 / w) * h)
+    else:
+        new_h = 256
+        new_w = int((256 / h) * w)
+    
+    # Thay đổi kích thước hình ảnh giữ tỷ lệ
+    img_resized = img.resize((new_w, new_h))
+    
+    return img_resized
 
 preprocess = transforms.Compose([
     transforms.Resize((256,256)),
@@ -41,13 +61,15 @@ sample_images = {
 # Define the sample images
 model_paths = {
     "ADOF_1": "./weights/ADOF_model_epoch_9.pth",
-    "ADOF_2": "./weights/ADOF_2.pth",
+    "ADOF_2": "./weights/adof_2.pth",
     "NPR": "./weights/NPR.pth",
 }
+model = None
 
 # Define the function to make predictions on an image
-def predict(image):
-    
+def predict(model, image):
+    if model is None:
+        return []
     try:
         image = preprocess(image).unsqueeze(0)
 
@@ -68,12 +90,16 @@ def predict(image):
         print(f"Error predicting image: {e}")
         return []
 
+if 'model' not in st.session_state:
+    st.session_state.model = None  # Khởi tạo trạng thái mô hình ban đầu là None
+
 # Define the Streamlit app
 def app():
+    
     st.title("Synthetic Image Detection")
     col1, col2 = st.columns(2)
     file_name = ''
-
+    
 # Tạo một ô trống để hiển thị kết quả
     with col1:
             # Add a file uploader
@@ -81,22 +107,32 @@ def app():
         
     # # Add a selectbox to choose from sample images
         model_name = st.selectbox("Select model:", list(model_paths.keys()))
-        st.write(model_paths[model_name])
+        
     # Thêm nút để thực hiện dự đoán (nếu cần)
-        if st.button("Load model"):
-            if model_name != 'NPR':
-                model = resnet50(num_classes=1)
-            else:
-                model = npr(num_classes=1)
+        if st.session_state.model != model_name:
+            st.session_state.model = model_name
             
+        if model_name != 'NPR':
+            st.write('Load Adof model')
+            model = resnet50(num_classes=1)
             model.load_state_dict(torch.load(model_paths[model_name], map_location='cpu'), strict=True)
+            model.eval()
+            st.write(model_paths[st.session_state.model])
+        else:
+            st.write('Load NPR model')
+            model = npr(num_classes=1)
+            model.load_state_dict(torch.load(model_paths[model_name], map_location='cpu'), strict=True)
+            model.eval()
+            st.write(model_paths[st.session_state.model])
 
         sample = st.selectbox("Or choose from sample images:", list(sample_images.keys()))
         # If an image is uploaded, make a prediction on it
         if uploaded_file is not None:
             file_name = uploaded_file.name
-            image = Image.open(uploaded_file)
-            predictions = predict(image)
+            #image = Image.open(uploaded_file)
+            image = resize_image(uploaded_file)
+
+            predictions = predict(model,image)
             #st.image(image, caption="Uploaded Image.", use_column_width=True)
 
 
@@ -105,7 +141,7 @@ def app():
             file_name = sample.capitalize()
             image = Image.open(sample_images[sample])
             #st.image(image, caption=sample.capitalize() + " Image.", use_column_width=True)
-            predictions = predict(image)
+            predictions = predict(model,image)
 
         if predictions:
             st.write("Predictions:")
